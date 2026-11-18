@@ -575,34 +575,46 @@ export function mountReaderPlus(ctx) {
     const p = $('page');
     return p ? String(p.innerText || p.textContent || '').replace(/\s+/g, ' ').trim() : '';
   }
-  // 原生桥读完一页后回调；Web Speech 也复用同一段「自动翻下一页」逻辑
+  // ttsAutoNextForThisRound：仅「播放本页」允许读完自动翻页；「朗读选中片段」读完即停。
+  // 每条 utterance 只对应一次朗读，回调里读的是本次标志，互不串扰。
+  let ttsAutoNextForThisRound = false;
+  // 原生桥读完一段后回调；Web Speech 也复用同一段逻辑
   window.__inkTtsOnEnd = () => {
     if (!ttsOn) return;
-    if (config.ttsAutoNext && ctx.requestTurn) {
+    if (ttsAutoNextForThisRound && config.ttsAutoNext && ctx.requestTurn) {
       ctx.requestTurn('next', 'tts');
       setTimeout(() => { if (ttsOn) speakCurrent(); }, 700);
     } else stopTTS();
   };
-  function speakCurrent() {
-    if (!ttsSupported()) { ctx.showToast && ctx.showToast('本机不支持语音朗读'); return; }
+  // 通用朗读：text=要读的文字，autoNext=读完是否续翻页。原生桥优先，Web Speech 兜底。
+  function speakText(text, opts) {
+    if (!ttsSupported()) { ctx.showToast && ctx.showToast('本机不支持语音朗读'); return false; }
     stopTTS();
-    const text = pageText().slice(0, 6000);
-    if (!text) return;
+    const clean = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 6000);
+    if (!clean) return false;
+    ttsAutoNextForThisRound = !!(opts && opts.autoNext);
     const rate = clamp(Number(config.ttsRate) || 1, 0.6, 1.8);
     const nt = nativeTts();
     if (nt) {
-      try { nt.speak(text, rate); } catch (e) { ctx.showToast && ctx.showToast('朗读启动失败'); return; }
+      try { nt.speak(clean, rate); } catch (e) { ctx.showToast && ctx.showToast('朗读启动失败'); return false; }
     } else {
-      const u = new SpeechSynthesisUtterance(text);
+      const u = new SpeechSynthesisUtterance(clean);
       u.lang = 'zh-CN'; u.rate = rate;
       u.onend = () => window.__inkTtsOnEnd();
       u.onerror = () => stopTTS();
-      try { window.speechSynthesis.speak(u); } catch (e) { stopTTS(); return; }
+      try { window.speechSynthesis.speak(u); } catch (e) { stopTTS(); return false; }
     }
     ttsOn = true;
     $('plus-ttsbar').classList.remove('hidden');
     $('plus-tts-state').textContent = '朗读中';
     $('plus-tts-toggle').textContent = nt ? '停止' : '暂停';
+    return true;
+  }
+  // 播放本页：沿用原行为（读完可按设置自动翻页）
+  function speakCurrent() {
+    const text = pageText().slice(0, 6000);
+    if (!text) return;
+    speakText(text, { autoNext: true });
   }
   function stopTTS() {
     ttsOn = false;
@@ -955,6 +967,8 @@ export function mountReaderPlus(ctx) {
     sortShelf, decorateShelf,
     saveBookLayout,
     openPanel, closePanel,
+    // 选中文字朗读（R-059）：读完即停，不自动翻页
+    speakSelection: (text) => speakText(text, { autoNext: false }),
     state: () => ({
       config: Object.assign({}, config), bookId, totalChars, lastPct,
       effectiveMs, readChars, twoPage: twoPageNow, ttsOn, gazePhase,

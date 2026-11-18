@@ -28,8 +28,11 @@
 // v23：修复「每日阅读时长偏短」——js/app.js、js/plus.js、js/plus-core.js 均变更
 // （把 30 秒有效阅读门槛从累计时长解耦）。这三个文件本来就不在 REUSE，无需摘出；
 // 但仍须 +1 触发 INK_SW_ACTIVATED 版本比对，否则真机升级后继续吃旧的计时逻辑。
-const CACHE = 'inkreader-v23';
-const PREV_CACHE = 'inkreader-v22';
+// v24：新增「选中文字即朗读」（R-059）——index.html 工具条加朗读按钮、js/app.js 绑定、
+// js/plus.js 抽出 speakText 复用原生/Web TTS 引擎。三文件本就不在 REUSE，仍须 +1
+// 触发 INK_SW_ACTIVATED 重载，否则真机升级后工具条没有朗读按钮 / 绑定不生效。
+const CACHE = 'inkreader-v24';
+const PREV_CACHE = 'inkreader-v23';
 // 巨大的、永不改变的第三方库走 cache-first（首次拉取后固化）；
 // 应用自身脚本/css 走 network-first，永远取 APK 内最新，杜绝旧缓存覆盖新代码。
 const VENDOR = [

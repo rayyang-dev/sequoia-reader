@@ -61,7 +61,12 @@ check('异常间隔改为 clamp 而非丢弃', /Math\.min\(Math\.max\(0, now - r
 check('plus.js 开关文案已按新口径同步', /有效阅读估算/.test(plus) && /每日阅读时长统计不受影响/.test(plus) && !/亮屏放着不动不计时/.test(plus));
 check('effectiveTick 仍保留 30 秒门槛（未被误改，供会话估算用）', /export function effectiveTick\(/.test(core) && /idleFor <= 30000/.test(core));
 check('plus-core.js 导出 readingTimeTick', /export function readingTimeTick\(/.test(core));
-check('sw.js 已升 inkreader-v23 / PREV_CACHE=v22', /const CACHE = 'inkreader-v23';/.test(sw) && /const PREV_CACHE = 'inkreader-v22';/.test(sw));
+// 版本断言按「不低于 v23 且 PREV 恰为 CACHE 上一代」校验，避免每次正常升版都误报
+{
+  const cv = (sw.match(/const CACHE = 'inkreader-v(\d+)'/) || [])[1];
+  const pv = (sw.match(/const PREV_CACHE = 'inkreader-v(\d+)'/) || [])[1];
+  check('sw.js CACHE≥v23 且 PREV_CACHE 为上一代', Number(cv) >= 23 && Number(pv) === Number(cv) - 1, { cv, pv });
+}
 check('sw.js ASSETS 含 plus-core.js', /'js\/plus-core\.js'/.test(sw));
 const reuseBody = (sw.match(/const REUSE = \[([\s\S]*?)\]\.concat\(VENDOR\)/) || [])[1] || '';
 check('变更的 app.js / plus.js / plus-core.js 均不在 REUSE', !/js\/app\.js/.test(reuseBody) && !/js\/plus\.js/.test(reuseBody) && !/js\/plus-core\.js/.test(reuseBody));
