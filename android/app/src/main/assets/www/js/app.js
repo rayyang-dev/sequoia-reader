@@ -1456,6 +1456,18 @@ async function doTranslate(text) {
 function initTranslateSelection() {
   document.addEventListener('mouseup', (e) => setTimeout(() => onSelectEnd(e), 0));
   document.addEventListener('touchend', (e) => setTimeout(() => onSelectEnd(e), 0));
+  // 选中文字即朗读（R-059）：复用 Plus 的 TTS 引擎，读完即停不翻页
+  $('sel-speak').addEventListener('click', () => {
+    if (!lastSelText) return;
+    const text = lastSelText;
+    $('sel-bar').classList.add('hidden');
+    if (plus && typeof plus.speakSelection === 'function') {
+      const ok = plus.speakSelection(text);
+      if (ok) showToast('朗读选中文字');
+    } else {
+      showToast('朗读功能未就绪');
+    }
+  });
   $('sel-translate').addEventListener('click', () => { if (lastSelText) doTranslate(lastSelText); });
   $('sel-ai').addEventListener('click', () => { if (lastSelText) doExplain(lastSelText); });
   $('sel-highlight').addEventListener('click', addHighlightFromSelection);
