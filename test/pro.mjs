@@ -61,6 +61,7 @@ try {
     proReady: !!window.__INK_PRO,
     bar: !!document.getElementById('pro-bar'),
     chip: !!document.getElementById('pro-chip'),
+    loc: !!document.getElementById('pro-loc'),
     panel: !!document.getElementById('pro-panel'),
     css: Array.from(document.styleSheets).some((s) => (s.href || '').includes('pro.css')),
   }));
@@ -148,6 +149,28 @@ try {
     return out;
   });
   results.push(...logic);
+
+  // ---- 右上角位置标签：章节名 + 页码（沉浸阅读时也常驻可见）----
+  const proJs = fs.readFileSync(path.join(ROOT, 'js/pro.js'), 'utf8');
+  const appJs = fs.readFileSync(path.join(ROOT, 'js/app.js'), 'utf8');
+  const proCss = fs.readFileSync(path.join(ROOT, 'css/pro.css'), 'utf8');
+  const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+  const reuse = sw.split('const REUSE = [')[1] || '';
+  const reuseEnd = reuse.indexOf(']');
+  const reuseBody = reuse.slice(0, reuseEnd > 0 ? reuseEnd : reuse.length);
+  results.push({ name: 'pro.js 挂载 #pro-loc 节点', pass: /id="pro-loc"/.test(proJs) });
+  results.push({ name: 'pro.js refresh 读取 p.loc 并更新标签', pass: /loc\.textContent = text/.test(proJs) && /p\.loc/.test(proJs) });
+  results.push({ name: 'app.js getProgress 提供 loc（章节Label + 页码）', pass: /loc:\s*chapterLabel\(ci\)/.test(appJs) && /\(pi \+ 1\)/.test(appJs) });
+  results.push({ name: 'pro.css #pro-loc 定位右上角（right + top）', pass: /#pro-loc\s*\{[^}]*position:\s*fixed[^}]*right:\s*8px[^}]*top:/.test(proCss) });
+  results.push({ name: 'pro.css 位置标签固定顶栏下方（top:56px）', pass: /#pro-loc\s*\{[^}]*top:\s*56px/.test(proCss) });
+  results.push({ name: 'pro.css 沉浸态隐藏标签（零遮挡，唤出控制条才显示）', pass: /#pro-root:not\(\.pro-chrome\) #pro-loc\s*\{[^}]*display:\s*none/.test(proCss) });
+  const swVer = Number((sw.match(/const CACHE = 'inkreader-v(\d+)'/) || [])[1]);
+  results.push({ name: 'SW≥v25 且 css/pro.css 已从 REUSE 摘出', pass: swVer >= 25 && !/'css\/pro\.css'/.test(reuseBody), extra: { swVer } });
+  const locDom = await page.evaluate(() => {
+    const el = document.getElementById('pro-loc');
+    return { present: !!el, hidden: el ? el.classList.contains('pro-hidden') : null, text: el ? el.textContent : '' };
+  });
+  results.push({ name: '运行中 #pro-loc 存在（未开书时可隐藏）', pass: locDom.present, extra: locDom });
 } catch (e) {
   results.push({ name: '测试执行', pass: false, extra: String(e && e.message ? e.message : e) });
 }

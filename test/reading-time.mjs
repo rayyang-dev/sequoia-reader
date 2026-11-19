@@ -70,7 +70,14 @@ check('plus-core.js 导出 readingTimeTick', /export function readingTimeTick\(/
 check('sw.js ASSETS 含 plus-core.js', /'js\/plus-core\.js'/.test(sw));
 const reuseBody = (sw.match(/const REUSE = \[([\s\S]*?)\]\.concat\(VENDOR\)/) || [])[1] || '';
 check('变更的 app.js / plus.js / plus-core.js 均不在 REUSE', !/js\/app\.js/.test(reuseBody) && !/js\/plus\.js/.test(reuseBody) && !/js\/plus-core\.js/.test(reuseBody));
-check('build.gradle 已升 34 / 1.4.9', /versionCode 34\b/.test(gradle) && /versionName "1\.4\.9"/.test(gradle));
+// 通用断言：只要求版本不低于引入本修复的 34/1.4.9，后续正常递增不应误报（v25 时吃过一次硬编码的亏）
+{
+  const vc = Number((gradle.match(/versionCode\s+(\d+)/) || [])[1]);
+  const vn = (gradle.match(/versionName\s+"([^"]+)"/) || [])[1] || '';
+  const parts = vn.split('.').map(Number);
+  const ge149 = parts[0] > 1 || (parts[0] === 1 && (parts[1] > 4 || (parts[1] === 4 && parts[2] >= 9)));
+  check('build.gradle versionCode≥34 且 versionName≥1.4.9', Number.isFinite(vc) && vc >= 34 && ge149, { vc, vn });
+}
 
 // ---------------- ③ 真实节奏数值模拟 ----------------
 console.log('\n③ 30 分钟阅读节奏模拟');

@@ -31,8 +31,11 @@
 // v24：新增「选中文字即朗读」（R-059）——index.html 工具条加朗读按钮、js/app.js 绑定、
 // js/plus.js 抽出 speakText 复用原生/Web TTS 引擎。三文件本就不在 REUSE，仍须 +1
 // 触发 INK_SW_ACTIVATED 重载，否则真机升级后工具条没有朗读按钮 / 绑定不生效。
-const CACHE = 'inkreader-v24';
-const PREV_CACHE = 'inkreader-v23';
+// v25：右上角常驻「章节 + 页码」——css/pro.css 新增 #pro-loc 样式、js/pro.js refresh 更新、
+// js/app.js 的 getProgress 补 loc 文本。css/pro.css 原本在 REUSE 里，必须摘出，
+// 否则 WebView 升级时从旧缓存复制旧样式，右上角位置标签不显示。app.js/pro.js 本就不在 REUSE。
+const CACHE = 'inkreader-v25';
+const PREV_CACHE = 'inkreader-v24';
 // 巨大的、永不改变的第三方库走 cache-first（首次拉取后固化）；
 // 应用自身脚本/css 走 network-first，永远取 APK 内最新，杜绝旧缓存覆盖新代码。
 const VENDOR = [
@@ -106,7 +109,7 @@ const ASSETS = [
 const REUSE = [
   'manifest.webmanifest',
   // css/style.css 在 v15 已变更，升级时必须取新版本，不能从旧缓存复用
-  'css/pro.css',
+  // css/pro.css 在 v25 已变更（右上角位置标签 #pro-loc），升级必须取新版本，不能复用旧缓存
   'css/ink-flip.css',
   'js/inkflip.js',
   'js/store.js',

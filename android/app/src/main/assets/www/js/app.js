@@ -2455,7 +2455,13 @@ function createProLayer() {
     setLayoutSetting: (k, v) => { settings[k] = v; applySettings(); saveSettings(settings); scheduleRepaginate(); if (plus) plus.saveBookLayout(k, v); },
     seekByPct,
     restorePosition,
-    getProgress: () => (currentBook ? { pct: computeProgressPct(), ci, pi } : null),
+    getProgress: () => (currentBook
+      ? {
+          pct: computeProgressPct(), ci, pi,
+          // 右上角常驻位置文本：章节名 + 当前页/本章总页数（pages 为当前章的分页数组）
+          loc: chapterLabel(ci) + ' · 第' + (pi + 1) + '/' + (pages.length || 1) + '页',
+        }
+      : null),
     showToast,
   });
   // 只读诊断 / 自动化回归入口：不参与业务逻辑，便于在无真机环境验证编排层与视线状态机。

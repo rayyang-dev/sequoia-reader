@@ -76,7 +76,13 @@ step('plus.js 暴露 speakSelection 且 autoNext=false',
   /speakSelection:\s*\(text\)\s*=>\s*speakText\(text,\s*\{\s*autoNext:\s*false\s*\}\)/.test(plus));
 step('plus.js speakText 复用原生桥与 Web Speech',
   /nt\.speak\(clean, rate\)/.test(plus) && /new SpeechSynthesisUtterance\(clean\)/.test(plus));
-step('SW 缓存升至 v24', /const CACHE = 'inkreader-v24'/.test(sw) && !/'inkreader-v24'/.test(sw.split('const REUSE')[1] || ''));
+// 通用断言：SW 缓存不低于引入本功能的 v24，后续正常递增不误报
+{
+  const cv = Number((sw.match(/const CACHE = 'inkreader-v(\d+)'/) || [])[1]);
+  const curTag = (sw.match(/const CACHE = '(inkreader-v\d+)'/) || [])[1] || '';
+  const reuseTail = sw.split('const REUSE')[1] || '';
+  step('SW 缓存≥v24 且当前版本不在 REUSE', Number(cv) >= 24 && !!curTag && !reuseTail.includes("'" + curTag + "'"), { cv, curTag });
+}
 
 const ctx = await browser.createBrowserContext();
 const page = await ctx.newPage();
