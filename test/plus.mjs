@@ -257,7 +257,9 @@ try {
   check('改进 1：阅读位置锚点已落盘', !!opened.anchor && !!opened.anchor.quote, { anchor: opened.anchor });
 
   // 工具箱面板 + 暂停联动
-  await page.click('#plus-entry');
+  // 注：统一工具面板 hub 会把 #plus-entry 图标收拢（CSS 隐藏），DOM 仍在；用 JS click 触发，
+  // 这样既验证了旧面板逻辑未被破坏，也不依赖已被新 UI 隐藏的可见图标。
+  await page.evaluate(() => { const e = document.getElementById('plus-entry'); if (e) e.click(); });
   await sleep(200);
   const panel = await page.evaluate(() => ({
     open: !document.getElementById('plus-panel').classList.contains('hidden'),
@@ -292,7 +294,8 @@ try {
   check('新功能 1：跳转后自动收起工具箱', jumped.panelClosed);
 
   // 章节速览 / 统计 / 设置
-  await page.click('#plus-entry'); await sleep(120);
+  // 同上：hub 收拢了 #plus-entry 图标，用 JS click 触发旧面板
+  await page.evaluate(() => { const e = document.getElementById('plus-entry'); if (e) e.click(); }); await sleep(120);
   await page.click('#plus-tabs button[data-tab="chapters"]'); await sleep(150);
   const chapters = await page.evaluate(() => document.querySelectorAll('#plus-chapter-out .plus-chapter').length);
   check('新功能 6：章节速览列出全部章节与预估时长', chapters === 3, { chapters });
@@ -372,8 +375,9 @@ try {
     return true;
   });
   await sleep(120);
-  const bar = await hitTest(['#btn-next', '#btn-toc', '#plus-entry']);
-  check('App 集成：控制条按钮与工具箱入口不被 Plus 浮层遮挡',
+  // hub 收拢了 #plus-entry，统一入口改为 #hub-entry（同一 pro-chip 内，验证它不被浮层遮挡）
+  const bar = await hitTest(['#btn-next', '#btn-toc', '#hub-entry']);
+  check('App 集成：控制条按钮与工具入口不被浮层遮挡',
     readerClickable && Object.values(bar).every(Boolean), bar);
   await page.evaluate(() => document.getElementById('btn-back').click());
   await sleep(400);

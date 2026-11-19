@@ -42,6 +42,8 @@ public class MainActivity extends BridgeActivity {
     // Plus 层：本机 TTS（Android WebView 常缺 Web Speech API）与文件导出（WebView 不处理 blob: 下载）。
     private TextToSpeech tts;
     private volatile boolean ttsReady = false;
+    // TTS 状态供 Web 层查询以决定是否回退 Web Speech：0=未初始化/未知，1=就绪，2=不可用
+    private volatile int ttsState = 0;
     private String pendingSpeak;
     private float pendingRate = 1f;
 
@@ -73,38 +75,68 @@ public class MainActivity extends BridgeActivity {
     // ---------- Plus：本机朗读 ----------
     void speakOut(String text, float rate) {
         if (text == null || text.isEmpty()) return;
+        // 已知不可用：不再进入「只存 pending 永不播放」的卡死态，直接回调 Web 层回退 Web Speech。
+        if (ttsState == 2) { notifyTtsUnavailable(); return; }
         if (tts == null) {
             pendingSpeak = text;
             pendingRate = rate;
+            ttsState = 0;
             try {
                 tts = new TextToSpeech(getApplicationContext(), status -> {
                     if (status != TextToSpeech.SUCCESS) {
-                        runOnUiThread(() -> Toast.makeText(this, "本机语音引擎不可用", Toast.LENGTH_LONG).show());
+                        // 初始化失败：彻底释放并置为不可用，避免 tts 非空但 ttsReady=false 的卡死态；
+                        // 同时通知 Web 层改用 Web Speech，而不是让用户点了没反应。
+                        try { if (tts != null) tts.shutdown(); } catch (Throwable ignore) {}
+                        tts = null; ttsReady = false; ttsState = 2;
+                        pendingSpeak = null;
+                        notifyTtsUnavailable();
                         return;
                     }
                     try {
-                        tts.setLanguage(Locale.CHINESE);
+                        int r = tts.setLanguage(Locale.CHINESE);
+                        if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) {
+                            // 引擎在但缺中文语音包：同样视为不可用，让 Web 回退，避免读成英文/无声。
+                            try { tts.shutdown(); } catch (Throwable ignore) {}
+                            tts = null; ttsReady = false; ttsState = 2; pendingSpeak = null;
+                            notifyTtsUnavailable();
+                            return;
+                        }
                         tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                             @Override public void onStart(String id) {}
                             @Override public void onDone(String id) { notifyTtsEnd(); }
                             @Override public void onError(String id) { notifyTtsEnd(); }
                         });
                         ttsReady = true;
+                        ttsState = 1;
                         if (pendingSpeak != null) {
                             doSpeak(pendingSpeak, pendingRate);
                             pendingSpeak = null;
                         }
-                    } catch (Throwable ignore) {}
+                    } catch (Throwable ignore) {
+                        ttsState = 2; notifyTtsUnavailable();
+                    }
                 });
             } catch (Throwable t) {
-                runOnUiThread(() -> Toast.makeText(this, "无法初始化语音引擎", Toast.LENGTH_LONG).show());
+                try { if (tts != null) tts.shutdown(); } catch (Throwable ignore) {}
+                tts = null; ttsReady = false; ttsState = 2; pendingSpeak = null;
+                notifyTtsUnavailable();
             }
         } else if (ttsReady) {
             doSpeak(text, rate);
         } else {
+            // 正在初始化：暂存，等回调里消费
             pendingSpeak = text;
             pendingRate = rate;
         }
+    }
+
+    // 通知 Web 层原生 TTS 不可用，由 plus.js 回退 Web Speech 并给出可操作引导。
+    private void notifyTtsUnavailable() {
+        runOnUiThread(() -> {
+            Bridge b = getBridge();
+            WebView wv = b == null ? null : b.getWebView();
+            if (wv != null) wv.evaluateJavascript("window.__inkTtsUnavailable && window.__inkTtsUnavailable()", null);
+        });
     }
 
     private void doSpeak(String text, float rate) {
@@ -184,6 +216,10 @@ public class MainActivity extends BridgeActivity {
 
         @JavascriptInterface
         public void stopSpeak() { host.runOnUiThread(() -> host.stopSpeak()); }
+
+        // 0=未初始化/未知，1=就绪，2=不可用。JS 据此决定是否回退 Web Speech。
+        @JavascriptInterface
+        public int ttsStatus() { return host.ttsState; }
     }
 
     // 视线翻页：原生预申请摄像头权限。在部分鸿蒙兼容容器里，WebView 内部 onPermissionRequest

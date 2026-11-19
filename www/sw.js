@@ -34,8 +34,10 @@
 // v25：右上角常驻「章节 + 页码」——css/pro.css 新增 #pro-loc 样式、js/pro.js refresh 更新、
 // js/app.js 的 getProgress 补 loc 文本。css/pro.css 原本在 REUSE 里，必须摘出，
 // 否则 WebView 升级时从旧缓存复制旧样式，右上角位置标签不显示。app.js/pro.js 本就不在 REUSE。
-const CACHE = 'inkreader-v25';
-const PREV_CACHE = 'inkreader-v24';
+// v26：统一工具面板 hub —— 新增 css/hub.css、js/hub.js（新文件必须进 ASSETS 且绝不进 REUSE），
+// app.js 引 mountHub 并暴露 window.__INK_HUB；plus.js 暴露朗读控制。index.html/app.js/plus.js 变更。
+const CACHE = 'inkreader-v26';
+const PREV_CACHE = 'inkreader-v25';
 // 巨大的、永不改变的第三方库走 cache-first（首次拉取后固化）；
 // 应用自身脚本/css 走 network-first，永远取 APK 内最新，杜绝旧缓存覆盖新代码。
 const VENDOR = [
@@ -61,6 +63,7 @@ const ASSETS = [
   'css/plus.css',
   'css/stats.css',
   'css/nexus.css',
+  'css/hub.css',
   'css/aurora.css',
   'css/ink-flip.css',
   'js/app.js',
@@ -81,6 +84,7 @@ const ASSETS = [
   'js/stats.js',
   'js/nexus.js',
   'js/nexus-core.js',
+  'js/hub.js',
   'js/aurora.js',
   'js/aurora-core.js',
   'js/aurora-registry.js',

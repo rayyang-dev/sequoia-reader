@@ -22,6 +22,7 @@ import { mountReaderPlus } from './plus.js';
 import { readingTimeTick } from './plus-core.js';
 import { mountStatsDashboard } from './stats.js';
 import { mountReaderNexus } from './nexus.js';
+import { mountHub } from './hub.js';
 import { mountAurora } from './aurora.js';
 import { playInkFlip } from './inkflip.js';
 
@@ -2470,6 +2471,60 @@ function createProLayer() {
     getSettings: () => settings,
     getPosition: () => (currentBook ? { ci, pi } : null),
   };
+  // 统一工具面板 hub.js 的操作 API。只暴露已存在的内部函数，不改任何业务逻辑；
+  // hub 不挂载时这段仅为 inert 对象，零副作用。
+  window.__INK_HUB = {
+    isReading: () => !!currentBook && !$('reader').classList.contains('hidden'),
+    progress: () => (currentBook ? {
+      ci, pi, pct: computeProgressPct(),
+      pages: pages.length, chapters: currentBook.chapters.length,
+    } : null),
+    chapters: () => (currentBook || { chapters: [] }).chapters.map((c, i) => ({ i, label: chapterLabel(i) })),
+    goChapter: (i) => {
+      if (!currentBook || i < 0 || i >= currentBook.chapters.length) return;
+      if (pro) pro.remember();
+      ci = i; pi = 0;
+      paginateCurrentChapter(); closePanels(); afterPageTurn(true);
+    },
+    goPercent: (pct) => { if (currentBook) seekByPct(pct); },
+    bookmarks: () => (loadBookmarks()[currentBook ? currentBook.id : ''] || []).slice(),
+    addBookmarkHere: () => { if (currentBook) { addBookmark(); return true; } return false; },
+    removeBookmark: (idx) => {
+      if (!currentBook) return;
+      const m = loadBookmarks();
+      if ((m[currentBook.id] || [])[idx] === undefined) return;
+      m[currentBook.id].splice(idx, 1); saveBookmarks(m);
+    },
+    goBookmark: (bm) => {
+      if (!currentBook || !bm) return;
+      if (pro) pro.remember();
+      ci = bm.ci; pi = bm.pi;
+      paginateCurrentChapter(); closePanels(); afterPageTurn(true);
+    },
+    layout: () => ({
+      fontSize: settings.fontSize, lineHeight: settings.lineHeight,
+      margin: settings.margin, theme: settings.theme,
+      paragraphSpacing: settings.paragraphSpacing, letterSpacing: settings.letterSpacing,
+      justify: !!settings.justify, firstLineIndent: !!settings.firstLineIndent,
+    }),
+    setLayout: (k, v) => {
+      if (!(k in settings)) return;
+      settings[k] = v; saveSettings(settings); applySettings();
+      if (['fontSize', 'lineHeight', 'margin', 'paragraphSpacing', 'letterSpacing', 'justify', 'firstLineIndent'].includes(k)) {
+        scheduleRepaginate();
+      }
+    },
+    tts: {
+      speak: () => { if (plus) plus.speakCurrent(); },
+      stop: () => { if (plus) plus.stopTTS(); },
+      toggle: () => { if (plus) plus.toggleTTS(); },
+      speakSelection: (t) => !!(plus && plus.speakSelection(t)),
+      isOn: () => !!(plus && plus.state().ttsOn),
+    },
+    autoMode: (mode) => { if (pro && pro.setMode) pro.setMode(mode); },
+    stats: () => loadStats(),
+    toast: (msg) => showToast(msg),
+  };
 
   // ---------- 低电量自动省电守卫 ----------
   // 视线翻页（前置摄像头 + 端侧 wasm 推理）是应用最大的可控耗电源。电量低于 15% 且未充电时，
@@ -2606,6 +2661,11 @@ function createAuroraLayer() {
   mountAurora();
 }
 
+// 统一工具面板：在 pro/plus/nexus 都挂载好（入口按钮已进 #pro-chip）后挂载，收拢图标入口。
+function createHubLayer() {
+  mountHub();
+}
+
 // ---------- 启动 ----------
 function init() {
   applySettings();
@@ -2614,6 +2674,7 @@ function init() {
   createStatsLayer();
   createNexusLayer();
   createAuroraLayer();
+  createHubLayer();
   bindEvents();
   renderShelf();
   ensureBookMeta();

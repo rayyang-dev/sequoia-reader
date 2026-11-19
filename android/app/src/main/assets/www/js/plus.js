@@ -245,6 +245,7 @@ export function mountReaderPlus(ctx) {
   let sessionShown = false;
   let twoPageNow = false;
   let ttsOn = false;
+  let ttsCurrentText = '';   // 当前正在朗读的文本，供原生 TTS 不可用时无缝切 Web Speech
   let selText = '';
   let lastSearchResults = [];
 
@@ -566,11 +567,36 @@ export function mountReaderPlus(ctx) {
 
   // ---------------- 新功能 2：TTS 朗读 ----------------
   // Android WebView 经常没有 Web Speech API：优先用原生 TextToSpeech 桥，浏览器 / PWA 用 speechSynthesis。
+  // 原生桥即使存在也可能「引擎不可用」（缺中文语音包 / ROM 禁用 TTS）：ttsStatus()=2 时视为不可用，
+  // 让 Web Speech 兜底，避免点了没反应。老版本桥没有 ttsStatus()，保持原样信任桥。
   function nativeTts() {
-    try { const b = window.InkTools; return b && typeof b.speak === 'function' ? b : null; } catch (e) { return null; }
+    try {
+      const b = window.InkTools;
+      if (!b || typeof b.speak !== 'function') return null;
+      if (typeof b.ttsStatus === 'function' && Number(b.ttsStatus()) === 2) return null;
+      return b;
+    } catch (e) { return null; }
   }
   function webTts() { return !!(window.speechSynthesis && typeof SpeechSynthesisUtterance !== 'undefined'); }
   function ttsSupported() { return !!nativeTts() || webTts(); }
+  // 原生异步告知 TTS 不可用（初始化失败 / 缺语音包）：把当前这段改用 Web Speech 读，避免静默失败。
+  let ttsFallbackPending = false;
+  window.__inkTtsUnavailable = () => {
+    const text = ttsCurrentText;
+    if (!text || !webTts()) {
+      ttsOn = false;
+      const bar = $('plus-ttsbar'); if (bar) bar.classList.add('hidden');
+      ctx.showToast && ctx.showToast('朗读不可用：请在系统「设置 → 语言和输入 → 文字转语音」安装中文语音包');
+      return;
+    }
+    try { window.speechSynthesis.cancel(); } catch (e) {}
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'zh-CN'; u.rate = clamp(Number(config.ttsRate) || 1, 0.6, 1.8);
+    u.onend = () => window.__inkTtsOnEnd();
+    u.onerror = () => stopTTS();
+    ttsFallbackPending = true;
+    try { window.speechSynthesis.speak(u); } catch (e) { stopTTS(); }
+  };
   function pageText() {
     const p = $('page');
     return p ? String(p.innerText || p.textContent || '').replace(/\s+/g, ' ').trim() : '';
@@ -588,15 +614,24 @@ export function mountReaderPlus(ctx) {
   };
   // 通用朗读：text=要读的文字，autoNext=读完是否续翻页。原生桥优先，Web Speech 兜底。
   function speakText(text, opts) {
-    if (!ttsSupported()) { ctx.showToast && ctx.showToast('本机不支持语音朗读'); return false; }
+    if (!ttsSupported()) {
+      ctx.showToast && ctx.showToast('朗读不可用：请在系统「设置 → 语言和输入 → 文字转语音」安装中文语音包');
+      return false;
+    }
     stopTTS();
     const clean = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 6000);
     if (!clean) return false;
+    ttsCurrentText = clean;
+    ttsFallbackPending = false;
     ttsAutoNextForThisRound = !!(opts && opts.autoNext);
     const rate = clamp(Number(config.ttsRate) || 1, 0.6, 1.8);
     const nt = nativeTts();
     if (nt) {
-      try { nt.speak(clean, rate); } catch (e) { ctx.showToast && ctx.showToast('朗读启动失败'); return false; }
+      try { nt.speak(clean, rate); } catch (e) {
+        // 桥调用抛错也回退 Web Speech，而不是直接失败
+        if (webTts()) { window.__inkTtsUnavailable(); }
+        else { ctx.showToast && ctx.showToast('朗读启动失败，请检查系统语音引擎'); return false; }
+      }
     } else {
       const u = new SpeechSynthesisUtterance(clean);
       u.lang = 'zh-CN'; u.rate = rate;
@@ -618,6 +653,8 @@ export function mountReaderPlus(ctx) {
   }
   function stopTTS() {
     ttsOn = false;
+    ttsCurrentText = '';
+    ttsFallbackPending = false;
     const nt = nativeTts();
     if (nt) { try { nt.stopSpeak(); } catch (e) {} }
     else { try { if (webTts()) window.speechSynthesis.cancel(); } catch (e) {} }
@@ -967,6 +1004,8 @@ export function mountReaderPlus(ctx) {
     sortShelf, decorateShelf,
     saveBookLayout,
     openPanel, closePanel,
+    // 朗读控制（供统一工具面板 hub.js 调用；行为与工具箱内按钮完全一致）
+    speakCurrent, stopTTS, toggleTTS,
     // 选中文字朗读（R-059）：读完即停，不自动翻页
     speakSelection: (text) => speakText(text, { autoNext: false }),
     state: () => ({
