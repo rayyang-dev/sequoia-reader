@@ -44,23 +44,6 @@ body[data-theme="night"] .page { background: var(--bg); }
 #pro-chip button:hover { background: color-mix(in srgb, var(--fg) 12%, transparent); }
 #pro-chip .pro-hidden { display: none; }
 
-/* 右上角位置：章节名 + 页码。固定在顶栏下方（约 46px 顶栏 + 余量）。
-   仅控制条显示时可见——点屏幕唤出控制条即可查看当前章节与页码；
-   沉浸态（hide-chrome）隐藏，避免半透明标签浮在正文上遮挡文字。 */
-#pro-loc {
-  position: fixed; right: 8px; top: 56px; z-index: 47;
-  max-width: calc(100vw - 16px);
-  padding: 3px 10px; border-radius: 999px;
-  background: color-mix(in srgb, var(--bar-bg) 88%, transparent);
-  border: 1px solid var(--border);
-  color: var(--bar-fg); font-size: 12px; font-variant-numeric: tabular-nums;
-  box-shadow: 0 1px 6px rgba(0,0,0,.08);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  pointer-events: none;
-}
-#pro-loc.pro-hidden,
-#pro-root:not(.pro-chrome) #pro-loc { display: none; }
-
 /* 自动翻页状态灯：让「AI 在做什么」始终可解释 */
 #pro-status {
   position: fixed; left: 50%; transform: translateX(-50%); top: 6px; z-index: 47;

@@ -356,6 +356,16 @@ body { background: var(--bg); color: var(--fg); }
   white-space: nowrap;
   opacity: 0.9;
 }
+/* 顶栏内嵌页码：章节名由居中 .chapter-title 呈现，这里只显示「第 X/Y 页」。
+   处在顶栏 flex 布局流内，不悬浮、不压正文；沉浸态（hide-chrome）随 .topbar 一起隐藏。 */
+.topbar-loc {
+  flex: 0 0 auto;
+  color: var(--bar-fg);
+  font-size: 12px;
+  opacity: 0.82;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
 .icon-btn {
   border: none;
   background: transparent;

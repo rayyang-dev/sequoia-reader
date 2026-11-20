@@ -61,7 +61,7 @@ try {
     proReady: !!window.__INK_PRO,
     bar: !!document.getElementById('pro-bar'),
     chip: !!document.getElementById('pro-chip'),
-    loc: !!document.getElementById('pro-loc'),
+    loc: !!document.getElementById('topbar-loc'),
     panel: !!document.getElementById('pro-panel'),
     css: Array.from(document.styleSheets).some((s) => (s.href || '').includes('pro.css')),
   }));
@@ -150,27 +150,43 @@ try {
   });
   results.push(...logic);
 
-  // ---- 右上角位置标签：章节名 + 页码（沉浸阅读时也常驻可见）----
+  // ---- 右上角位置标签：已改为顶栏内嵌 #topbar-loc，悬浮 #pro-loc 整套移除 ----
   const proJs = fs.readFileSync(path.join(ROOT, 'js/pro.js'), 'utf8');
   const appJs = fs.readFileSync(path.join(ROOT, 'js/app.js'), 'utf8');
+  const indexHtml = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const proCss = fs.readFileSync(path.join(ROOT, 'css/pro.css'), 'utf8');
+  const styleCss = fs.readFileSync(path.join(ROOT, 'css/style.css'), 'utf8');
   const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
   const reuse = sw.split('const REUSE = [')[1] || '';
   const reuseEnd = reuse.indexOf(']');
   const reuseBody = reuse.slice(0, reuseEnd > 0 ? reuseEnd : reuse.length);
-  results.push({ name: 'pro.js 挂载 #pro-loc 节点', pass: /id="pro-loc"/.test(proJs) });
-  results.push({ name: 'pro.js refresh 读取 p.loc 并更新标签', pass: /loc\.textContent = text/.test(proJs) && /p\.loc/.test(proJs) });
-  results.push({ name: 'app.js getProgress 提供 loc（章节Label + 页码）', pass: /loc:\s*chapterLabel\(ci\)/.test(appJs) && /\(pi \+ 1\)/.test(appJs) });
-  results.push({ name: 'pro.css #pro-loc 定位右上角（right + top）', pass: /#pro-loc\s*\{[^}]*position:\s*fixed[^}]*right:\s*8px[^}]*top:/.test(proCss) });
-  results.push({ name: 'pro.css 位置标签固定顶栏下方（top:56px）', pass: /#pro-loc\s*\{[^}]*top:\s*56px/.test(proCss) });
-  results.push({ name: 'pro.css 沉浸态隐藏标签（零遮挡，唤出控制条才显示）', pass: /#pro-root:not\(\.pro-chrome\) #pro-loc\s*\{[^}]*display:\s*none/.test(proCss) });
+  // 旧悬浮层必须彻底消失（DOM 节点 / refresh 逻辑 / 样式），杜绝压正文大标题
+  results.push({ name: 'pro.js 已移除 #pro-loc 节点', pass: !/id="pro-loc"/.test(proJs) });
+  results.push({ name: 'pro.js refresh 不再读取/写入 p.loc', pass: !/p\.loc/.test(proJs) && !/pro-loc/.test(proJs) });
+  results.push({ name: 'pro.css 已移除 #pro-loc 悬浮样式', pass: !/#pro-loc/.test(proCss) });
+  results.push({ name: 'app.js getProgress 不再提供 loc 字段', pass: !/loc:\s*chapterLabel\(ci\)/.test(appJs) });
+  // 新顶栏内嵌方案
+  const tlPos = indexHtml.indexOf('id="topbar-loc"');
+  const chPos = indexHtml.indexOf('id="chapter-title"');
+  const tocPos = indexHtml.indexOf('id="btn-toc-top"');
+  results.push({ name: 'index.html 顶栏内含 #topbar-loc（章节 Label 与目录按钮之间）', pass: tlPos > chPos && tlPos < tocPos });
+  const updateFn = (appJs.match(/function updateProgress\(\)\s*\{([\s\S]*?)\n\}/) || [])[1] || '';
+  results.push({ name: 'app.js updateProgress 写入 #topbar-loc 页码（章节名由居中标题承担）', pass: /\$\('topbar-loc'\)/.test(updateFn) && /topbarLoc\.textContent/.test(updateFn) && /pi \+ 1/.test(updateFn) && !/topbarLoc\.textContent\s*=\s*`\$\{chapterLabel/.test(updateFn) });
+  results.push({ name: 'style.css .topbar-loc 为布局流内 flex 子项（无 fixed 悬浮）', pass: /\.topbar-loc\s*\{[^}]*flex:\s*0 0 auto/.test(styleCss) && !/\.topbar-loc\s*\{[^}]*position:\s*fixed/.test(styleCss) });
+  results.push({ name: 'style.css 沉浸态隐藏顶栏（位置标签随之零遮挡）', pass: /#reader\.hide-chrome \.topbar/.test(styleCss) });
   const swVer = Number((sw.match(/const CACHE = 'inkreader-v(\d+)'/) || [])[1]);
-  results.push({ name: 'SW≥v25 且 css/pro.css 已从 REUSE 摘出', pass: swVer >= 25 && !/'css\/pro\.css'/.test(reuseBody), extra: { swVer } });
+  results.push({ name: 'SW≥v27 且 css/style.css、css/pro.css 均已从 REUSE 摘出', pass: swVer >= 27 && !/'css\/style\.css'/.test(reuseBody) && !/'css\/pro\.css'/.test(reuseBody), extra: { swVer } });
   const locDom = await page.evaluate(() => {
-    const el = document.getElementById('pro-loc');
-    return { present: !!el, hidden: el ? el.classList.contains('pro-hidden') : null, text: el ? el.textContent : '' };
+    const el = document.getElementById('topbar-loc');
+    const old = document.getElementById('pro-loc');
+    const bar = document.getElementById('topbar');
+    return {
+      present: !!el, oldGone: !old,
+      inTopbar: !!(el && bar && bar.contains(el)),
+      text: el ? el.textContent : '',
+    };
   });
-  results.push({ name: '运行中 #pro-loc 存在（未开书时可隐藏）', pass: locDom.present, extra: locDom });
+  results.push({ name: '运行中 #topbar-loc 在顶栏内，且悬浮 #pro-loc 不存在', pass: locDom.present && locDom.inTopbar && locDom.oldGone, extra: locDom });
 } catch (e) {
   results.push({ name: '测试执行', pass: false, extra: String(e && e.message ? e.message : e) });
 }

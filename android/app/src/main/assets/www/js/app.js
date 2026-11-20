@@ -760,6 +760,11 @@ async function renderPage() {
 function updateProgress() {
   const total = pages.length;
   const pct = computeProgressPct();
+  // 顶栏内嵌页码：章节名由居中的 #chapter-title 呈现，这里只补「第 X/Y 页」，
+  // 避免章节名在顶栏出现两次。放在布局流内，不再像旧版 #pro-loc 那样悬浮压正文大标题；
+  // 沉浸态随顶栏一起隐藏。
+  const topbarLoc = $('topbar-loc');
+  if (topbarLoc) topbarLoc.textContent = `第${pi + 1}/${total}页`;
   $('progress').textContent = `第${ci + 1}/${currentBook.chapters.length}章 · 第${pi + 1}/${total}页 · ${pct.toFixed(0)}%`;
   if (pro) pro.refresh(); // 常驻进度条（控制条隐藏时也看得见）
   if (plus) plus.onProgress({ pct, ci, pi, pages: total, chapterCount: currentBook.chapters.length });
@@ -2457,11 +2462,7 @@ function createProLayer() {
     seekByPct,
     restorePosition,
     getProgress: () => (currentBook
-      ? {
-          pct: computeProgressPct(), ci, pi,
-          // 右上角常驻位置文本：章节名 + 当前页/本章总页数（pages 为当前章的分页数组）
-          loc: chapterLabel(ci) + ' · 第' + (pi + 1) + '/' + (pages.length || 1) + '页',
-        }
+      ? { pct: computeProgressPct(), ci, pi }
       : null),
     showToast,
   });

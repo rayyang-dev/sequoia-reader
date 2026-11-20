@@ -28,7 +28,6 @@ export function mountReaderPro(ctx) {
   root.innerHTML = `
     <div id="pro-dim"></div>
     <div id="pro-bar" title="点击或拖动跳转进度"><div id="pro-fill"></div></div>
-    <div id="pro-loc" aria-label="当前章节与页码"></div>
     <div id="pro-chip">
       <span id="pro-pct">0%</span>
       <button id="pro-back" class="pro-hidden" title="返回跳转前位置" aria-label="返回跳转前位置">↩</button>
@@ -144,13 +143,8 @@ export function mountReaderPro(ctx) {
     const pct = clamp(num(p.pct, 0), 0, 100);
     $('pro-fill').style.width = pct.toFixed(2) + '%';
     $('pro-pct').textContent = pct.toFixed(0) + '%';
-    // 右上角常驻位置：章节名 + 页码。文本由 app 的 getProgress 提供，沉浸/控制条隐藏时也可见。
-    const loc = $('pro-loc');
-    if (loc) {
-      const text = typeof p.loc === 'string' ? p.loc : '';
-      loc.textContent = text;
-      loc.classList.toggle('pro-hidden', !text);
-    }
+    // 位置信息（章节名 + 页码）已并入顶栏 #topbar-loc，由 app.js 的 updateProgress() 更新。
+    // 此处不再维护悬浮标签，避免压住正文大标题。
     $('pro-back').classList.toggle('pro-hidden', positionStack.length === 0);
     applyDim();
   }

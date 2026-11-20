@@ -36,8 +36,10 @@
 // 否则 WebView 升级时从旧缓存复制旧样式，右上角位置标签不显示。app.js/pro.js 本就不在 REUSE。
 // v26：统一工具面板 hub —— 新增 css/hub.css、js/hub.js（新文件必须进 ASSETS 且绝不进 REUSE），
 // app.js 引 mountHub 并暴露 window.__INK_HUB；plus.js 暴露朗读控制。index.html/app.js/plus.js 变更。
-const CACHE = 'inkreader-v26';
-const PREV_CACHE = 'inkreader-v25';
+// v27：位置标签由悬浮 #pro-loc 改为顶栏内嵌 #topbar-loc（不再压正文大标题）。
+// index.html/app.js/pro.js/style.css/pro.css 变更，style.css/pro.css 升级必须取包内新版、不从旧缓存复用。
+const CACHE = 'inkreader-v27';
+const PREV_CACHE = 'inkreader-v26';
 // 巨大的、永不改变的第三方库走 cache-first（首次拉取后固化）；
 // 应用自身脚本/css 走 network-first，永远取 APK 内最新，杜绝旧缓存覆盖新代码。
 const VENDOR = [
