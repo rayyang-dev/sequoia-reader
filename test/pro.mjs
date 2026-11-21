@@ -171,11 +171,14 @@ try {
   const tocPos = indexHtml.indexOf('id="btn-toc-top"');
   results.push({ name: 'index.html 顶栏内含 #topbar-loc（章节 Label 与目录按钮之间）', pass: tlPos > chPos && tlPos < tocPos });
   const updateFn = (appJs.match(/function updateProgress\(\)\s*\{([\s\S]*?)\n\}/) || [])[1] || '';
-  results.push({ name: 'app.js updateProgress 写入 #topbar-loc 页码（章节名由居中标题承担）', pass: /\$\('topbar-loc'\)/.test(updateFn) && /topbarLoc\.textContent/.test(updateFn) && /pi \+ 1/.test(updateFn) && !/topbarLoc\.textContent\s*=\s*`\$\{chapterLabel/.test(updateFn) });
+  results.push({ name: 'app.js updateProgress 写入 #topbar-loc 页码', pass: /\$\('topbar-loc'\)/.test(updateFn) && /topbarLoc\.textContent/.test(updateFn) && /pi \+ 1/.test(updateFn) });
   results.push({ name: 'style.css .topbar-loc 为布局流内 flex 子项（无 fixed 悬浮）', pass: /\.topbar-loc\s*\{[^}]*flex:\s*0 0 auto/.test(styleCss) && !/\.topbar-loc\s*\{[^}]*position:\s*fixed/.test(styleCss) });
-  results.push({ name: 'style.css 沉浸态隐藏顶栏（位置标签随之零遮挡）', pass: /#reader\.hide-chrome \.topbar/.test(styleCss) });
+  // 新方案：顶栏常驻（flex 流内）不遮正文；沉浸态只隐藏返回/目录按钮，顶栏与位置信息都在
+  results.push({ name: 'style.css 顶栏为 flex 流内常驻元素（position:relative，非 absolute 覆盖正文）', pass: /\.topbar\s*\{[^}]*flex:\s*0 0 auto[^}]*position:\s*relative/.test(styleCss) });
+  results.push({ name: 'index.html 返回/目录按钮带 topbar-chrome class（沉浸态可单独隐藏）', pass: (indexHtml.match(/class="icon-btn topbar-chrome"/g) || []).length === 2 });
+  results.push({ name: 'style.css 沉浸态只隐藏底栏与返回/目录按钮，顶栏保留（位置一直可见）', pass: /#reader\.hide-chrome \.bottombar\s*\{\s*display:\s*none/.test(styleCss) && /#reader\.hide-chrome \.topbar-chrome\s*\{\s*display:\s*none/.test(styleCss) && !/#reader\.hide-chrome \.topbar\s*,\s*\n?#reader\.hide-chrome \.bottombar\s*\{\s*display:\s*none/.test(styleCss) });
   const swVer = Number((sw.match(/const CACHE = 'inkreader-v(\d+)'/) || [])[1]);
-  results.push({ name: 'SW≥v27 且 css/style.css、css/pro.css 均已从 REUSE 摘出', pass: swVer >= 27 && !/'css\/style\.css'/.test(reuseBody) && !/'css\/pro\.css'/.test(reuseBody), extra: { swVer } });
+  results.push({ name: 'SW≥v28 且 css/style.css、css/pro.css 均已从 REUSE 摘出', pass: swVer >= 28 && !/'css\/style\.css'/.test(reuseBody) && !/'css\/pro\.css'/.test(reuseBody), extra: { swVer } });
   const locDom = await page.evaluate(() => {
     const el = document.getElementById('topbar-loc');
     const old = document.getElementById('pro-loc');
@@ -187,6 +190,29 @@ try {
     };
   });
   results.push({ name: '运行中 #topbar-loc 在顶栏内，且悬浮 #pro-loc 不存在', pass: locDom.present && locDom.inTopbar && locDom.oldGone, extra: locDom });
+
+  // 运行时：沉浸态顶栏与位置常驻、按钮隐藏、正文在顶栏下方（不遮挡）
+  const chrome = await page.evaluate(() => {
+    const reader = document.getElementById('reader');
+    const bar = document.getElementById('topbar');
+    const loc = document.getElementById('topbar-loc');
+    const page = document.getElementById('page');
+    if (!reader || !bar) return { ok: false };
+    reader.classList.add('hide-chrome');
+    const barVisible = getComputedStyle(bar).display !== 'none';
+    const backHidden = getComputedStyle(document.getElementById('btn-back')).display === 'none';
+    const locVisible = !!loc && getComputedStyle(loc).display !== 'none';
+    const barRect = bar.getBoundingClientRect();
+    // 顶栏占据布局流：其底部应 > 0，且正文 viewport 起点在顶栏之下
+    const vpTop = page ? page.closest('.page-viewport').getBoundingClientRect().top : -1;
+    reader.classList.remove('hide-chrome');
+    return {
+      barVisible, backHidden, locVisible,
+      barBottom: Math.round(barRect.bottom), vpTop: Math.round(vpTop),
+      ok: barVisible && backHidden && locVisible && vpTop >= barRect.bottom - 2,
+    };
+  });
+  results.push({ name: '运行时沉浸态：顶栏与位置常驻、返回按钮隐藏、正文在顶栏下方不遮挡', pass: chrome.ok, extra: chrome });
 } catch (e) {
   results.push({ name: '测试执行', pass: false, extra: String(e && e.message ? e.message : e) });
 }

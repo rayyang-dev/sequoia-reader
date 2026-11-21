@@ -329,35 +329,52 @@ body { background: var(--bg); color: var(--fg); }
 
 /* ---------- 阅读器 ---------- */
 #reader { background: var(--bg); }
-.topbar, .bottombar {
-  position: absolute;
-  left: 0;
-  right: 0;
+/* 顶栏改为 flex 布局流内的常驻元素（不再 absolute 覆盖正文）：
+   正文 .page-viewport 自动排在顶栏下方，位置信息一直可见且绝不压正文。
+   bottombar 仍需 absolute 悬浮在底部（翻页/工具仅在唤出时出现）。 */
+.topbar {
+  flex: 0 0 auto;
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: 8px 12px;
   padding-top: max(8px, env(safe-area-inset-top));
-  padding-bottom: max(8px, env(safe-area-inset-bottom));
   background: var(--bar-bg);
   color: var(--bar-fg);
   border-bottom: 1px solid var(--hairline);
   min-height: 46px;
   z-index: 5;
 }
-.topbar { top: 0; }
-.bottombar { bottom: 0; border-bottom: none; border-top: 1px solid var(--hairline); }
+.bottombar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+  background: var(--bar-bg);
+  color: var(--bar-fg);
+  border-top: 1px solid var(--hairline);
+  min-height: 46px;
+  z-index: 5;
+}
+/* 弹性空白：把右侧的章节名+页码推到右上角，返回/目录按钮在其外侧 */
+.topbar-spacer { flex: 1 1 auto; }
+/* 章节名 + 页码都在右上角常驻显示，一组紧凑排列、不换行 */
 .chapter-title {
-  flex: 1;
-  text-align: center;
-  font-size: 14px;
+  flex: 0 1 auto;
+  min-width: 0;
+  text-align: right;
+  font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  opacity: 0.9;
+  opacity: 0.92;
 }
-/* 顶栏内嵌页码：章节名由居中 .chapter-title 呈现，这里只显示「第 X/Y 页」。
-   处在顶栏 flex 布局流内，不悬浮、不压正文；沉浸态（hide-chrome）随 .topbar 一起隐藏。 */
 .topbar-loc {
   flex: 0 0 auto;
   color: var(--bar-fg);
@@ -366,6 +383,8 @@ body { background: var(--bg); color: var(--fg); }
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+/* 页码与章节名之间加分隔点 */
+.topbar-loc::before { content: " · "; opacity: 0.6; }
 .icon-btn {
   border: none;
   background: transparent;
@@ -396,9 +415,10 @@ body { background: var(--bg); color: var(--fg); }
 .bb-nav { flex: 1 1 auto; }
 .bb-tools { gap: 2px; }
 
-/* 阅读时隐藏上下栏（点击屏幕中部唤出） */
-#reader.hide-chrome .topbar,
+/* 沉浸态：底栏整条隐藏；顶栏保留（章节+页码一直可见），只收起返回/目录按钮，
+   点屏幕中部唤出控制条时才出现。顶栏在 flex 流内占位，正文始终从下方排版、不遮挡。 */
 #reader.hide-chrome .bottombar { display: none; }
+#reader.hide-chrome .topbar-chrome { display: none; }
 
 .page-viewport {
   flex: 1 1 auto;

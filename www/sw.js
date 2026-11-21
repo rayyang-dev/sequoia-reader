@@ -38,8 +38,10 @@
 // app.js 引 mountHub 并暴露 window.__INK_HUB；plus.js 暴露朗读控制。index.html/app.js/plus.js 变更。
 // v27：位置标签由悬浮 #pro-loc 改为顶栏内嵌 #topbar-loc（不再压正文大标题）。
 // index.html/app.js/pro.js/style.css/pro.css 变更，style.css/pro.css 升级必须取包内新版、不从旧缓存复用。
-const CACHE = 'inkreader-v27';
-const PREV_CACHE = 'inkreader-v26';
+// v28：顶栏改为 flex 流内常驻（沉浸态也显示），章节+页码一直在右上角；沉浸态只隐藏返回/目录按钮。
+// index.html/style.css 变更，style.css 升级必须取包内新版、不从旧缓存复用。
+const CACHE = 'inkreader-v28';
+const PREV_CACHE = 'inkreader-v27';
 // 巨大的、永不改变的第三方库走 cache-first（首次拉取后固化）；
 // 应用自身脚本/css 走 network-first，永远取 APK 内最新，杜绝旧缓存覆盖新代码。
 const VENDOR = [

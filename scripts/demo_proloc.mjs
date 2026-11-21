@@ -1,7 +1,8 @@
-// 效果演示：右上角「章节 + 页码」已改为顶栏内嵌 #topbar-loc，不再悬浮压正文大标题。
+// 效果演示：右上角「章节 + 页码」常驻顶栏（flex 流内，不悬浮压正文）。
+// 沉浸态只隐藏返回/目录按钮，顶栏与位置信息一直可见，正文从顶栏下方排版。
 // 真实前端代码渲染并截图：
-//   demo-loc-1-top.png       控制条显示，标签在顶栏内（章节名与目录按钮之间）
-//   demo-loc-2-immersive.png 沉浸态，标签随顶栏一起隐藏（零遮挡）
+//   demo-loc-1-top.png       控制条唤出，顶栏含返回/章节/页码/目录
+//   demo-loc-2-immersive.png 沉浸态，顶栏保留章节+页码常驻，仅按钮隐藏
 import puppeteer from 'puppeteer-core';
 import http from 'http';
 import fs from 'fs';
@@ -86,23 +87,28 @@ try {
   const loc2 = await page.evaluate(() => { const el = document.getElementById('topbar-loc'); return { text: el && el.textContent }; });
   console.log('after next page loc=' + JSON.stringify(loc2));
 
-  // 进入沉浸态（隐藏控制条/顶栏），标签随之隐藏，零遮挡
+  // 进入沉浸态（隐藏底栏与返回/目录按钮），顶栏与章节+页码仍常驻
   await page.evaluate(() => document.querySelector('#reader').classList.add('hide-chrome'));
   await wait(300);
   const loc3 = await page.evaluate(() => {
     const el = document.getElementById('topbar-loc');
     const bar = document.getElementById('topbar');
+    const ch = document.getElementById('chapter-title');
+    const back = document.getElementById('btn-back');
     return {
       text: el && el.textContent,
+      chapter: ch && ch.textContent,
       topbarDisplay: bar && getComputedStyle(bar).display,
+      backDisplay: back && getComputedStyle(back).display,
       elVisible: !!(el && el.getBoundingClientRect().height > 0),
     };
   });
   await page.screenshot({ path: path.join(OUT, 'demo-loc-2-immersive.png') });
   console.log('saved demo-loc-2-immersive.png  loc=' + JSON.stringify(loc3));
 
-  const ok = loc1.inTopbar && loc1.oldGone && loc1.noOverlapWithText && loc2.text && loc3.topbarDisplay === 'none' && !loc3.elVisible;
-  console.log(ok ? 'DEMO_OK 顶栏内嵌、不压正文、翻页更新、沉浸态隐藏 —— 全部符合' : 'DEMO_FAIL');
+  const ok = loc1.inTopbar && loc1.oldGone && loc1.noOverlapWithText && loc2.text
+    && loc3.topbarDisplay !== 'none' && loc3.elVisible && loc3.backDisplay === 'none';
+  console.log(ok ? 'DEMO_OK 顶栏常驻、章节+页码一直可见、不压正文、翻页更新、沉浸态仅隐藏按钮 —— 全部符合' : 'DEMO_FAIL');
   if (!ok) process.exitCode = 1;
 } catch (e) { console.error('DEMO ERROR:', e && e.stack || e); process.exitCode = 1; }
 finally { await browser.close(); server.close(); }
