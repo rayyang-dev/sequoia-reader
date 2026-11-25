@@ -211,6 +211,12 @@ export const DEFAULT_SETTINGS = {
   translateDir: 'auto',
   aiAutoSummary: true, // 导入书籍且已配置 AI 时，自动在后台生成导读/摘要并缓存到本书
   checkinGoalMin: 10, // 阅读打卡阈值（分钟）：当日累计阅读达到该时长即自动打卡成功
+  // 每日阅读提醒（daily-pact）：默认关闭，用户主动开启时才申请系统通知权限。
+  // 时间均为 24 小时制；午间补一次用于对抗「记不住」，两条通知固定 ID 覆盖不会堆积。
+  reminderEnabled: false,
+  reminderTime: '21:00',
+  reminderSecondEnabled: false,
+  reminderSecondTime: '12:30',
   shelfGroupByCat: false, // 书架是否按分类分组展示
   keepScreenOn: true, // 阅读时保持屏幕常亮（不锁屏）；离开阅读器自动恢复
   categories: ['文学', '历史', '政治', '小说'], // 默认书籍分类（可在设置/书架顶部增删）

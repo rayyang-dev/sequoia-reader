@@ -40,8 +40,12 @@
 // index.html/app.js/pro.js/style.css/pro.css 变更，style.css/pro.css 升级必须取包内新版、不从旧缓存复用。
 // v28：顶栏改为 flex 流内常驻（沉浸态也显示），章节+页码一直在右上角；沉浸态只隐藏返回/目录按钮。
 // index.html/style.css 变更，style.css 升级必须取包内新版、不从旧缓存复用。
-const CACHE = 'inkreader-v28';
-const PREV_CACHE = 'inkreader-v27';
+// v29：新增「每日契约 / 每日阅读提醒」——新文件 js/daily-pact.js、css/daily-pact.css 必须进 ASSETS、
+// 绝不能进 REUSE；index.html / js/app.js / js/store.js / js/release-gate.js / js/privacy-consent.js 均变更，
+// 其中 js/store.js 原本在 REUSE 里，必须摘出，否则升级时旧缓存的 DEFAULT_SETTINGS 缺提醒字段。
+// 法律文案已同步（app.js 三份 + docs/site 两份 POLICY_VERSION=2），须 +1 触发页面重载。
+const CACHE = 'inkreader-v29';
+const PREV_CACHE = 'inkreader-v28';
 // 巨大的、永不改变的第三方库走 cache-first（首次拉取后固化）；
 // 应用自身脚本/css 走 network-first，永远取 APK 内最新，杜绝旧缓存覆盖新代码。
 const VENDOR = [
@@ -68,6 +72,7 @@ const ASSETS = [
   'css/stats.css',
   'css/nexus.css',
   'css/hub.css',
+  'css/daily-pact.css',
   'css/aurora.css',
   'css/ink-flip.css',
   'js/app.js',
@@ -89,6 +94,7 @@ const ASSETS = [
   'js/nexus.js',
   'js/nexus-core.js',
   'js/hub.js',
+  'js/daily-pact.js',
   'js/aurora.js',
   'js/aurora-core.js',
   'js/aurora-registry.js',
@@ -120,7 +126,7 @@ const REUSE = [
   // css/pro.css 在 v25 已变更（右上角位置标签 #pro-loc），升级必须取新版本，不能复用旧缓存
   'css/ink-flip.css',
   'js/inkflip.js',
-  'js/store.js',
+  // js/store.js 在 v29 变更（DEFAULT_SETTINGS 新增提醒字段），必须取包内新版，不能复用旧缓存
   'js/paginate.js',
   'js/pdfview.js',
   'js/translate.js',

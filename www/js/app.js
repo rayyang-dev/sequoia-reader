@@ -23,6 +23,7 @@ import { readingTimeTick } from './plus-core.js';
 import { mountStatsDashboard } from './stats.js';
 import { mountReaderNexus } from './nexus.js';
 import { mountHub } from './hub.js';
+import { mountDailyPact } from './daily-pact.js';
 import { mountAurora } from './aurora.js';
 import { playInkFlip } from './inkflip.js';
 
@@ -64,7 +65,7 @@ const THEME_PREVIEW = {
 
 // 法律声明文案（隐私政策 / 用户协议 / 权限说明）。iOS 与华为两平台通用，纯本地静态内容，无服务器依赖。
 // 联系邮箱、生效日期等需按实际情况替换（下方以占位给出）。
-const LEGAL_EFFECTIVE_DATE = '2026-11-04';
+const LEGAL_EFFECTIVE_DATE = '2026-11-25';
 const LEGAL_CONTACT_EMAIL = '732897783@qq.com'; // 送审版：与应用外隐私政策页保持一致
 const LEGAL_CONTENT = {
   privacy: {
@@ -78,15 +79,17 @@ const LEGAL_CONTENT = {
       <p>本版本<b>未开放</b> AI 助手、在线翻译等任何联网功能，也不提供配置第三方 API Key 的入口。本应用不会将你的书籍内容、选中文本或任何个人数据发送给第三方服务；应用内没有 AI 生成内容，也不存在与第三方模型相关的数据传输。</p>
       <h2>三、网络权限</h2>
       <p>本应用仅声明"网络"权限，由 Capacitor WebView 框架用于加载应用内本地资源；本应用没有后端服务器，不请求任何外部服务，也没有版本检查或遥测上报。书籍导入、阅读、笔记均不依赖网络，断网后全部核心功能可正常使用。</p>
-      <h2>四、我们不会出售或共享你的个人信息</h2>
+      <h2>四、本地阅读提醒</h2>
+      <p>如你主动开启「每日阅读提醒」，本应用会通过系统本地通知在设定时间提醒你阅读。提醒时间与开关状态只保存在设备本地；通知由本机系统闹钟触发，不经过任何服务器，通知内容不包含你的书籍、笔记或个人数据。你可随时在「设置 — 每日阅读提醒」中关闭或改时间；拒绝通知权限不影响阅读、统计与其他所有功能。</p>
+      <h2>五、我们不会出售或共享你的个人信息</h2>
       <p>除法律法规要求外，我们不会向任何第三方披露、出售或交易你的数据。</p>
-      <h2>五、儿童隐私</h2>
+      <h2>六、儿童隐私</h2>
       <p>本应用不专门面向未满 14 周岁的儿童，我们不会有意收集儿童个人信息。</p>
-      <h2>六、你的权利</h2>
+      <h2>七、你的权利</h2>
       <p>你可以随时通过卸载应用，或在系统设置中清除应用数据，来删除全部本地数据。</p>
-      <h2>七、政策变更</h2>
+      <h2>八、政策变更</h2>
       <p>如本政策发生变更，我们将在应用内更新并以最新版本为准。</p>
-      <h2>八、联系我们</h2>
+      <h2>九、联系我们</h2>
       <p>如你对隐私事宜有疑问，可通过邮箱 ${LEGAL_CONTACT_EMAIL} 联系我们。</p>
     `,
   },
@@ -123,6 +126,8 @@ const LEGAL_CONTENT = {
       <ul>
         <li><b>网络（INTERNET）</b>：由 Capacitor WebView 框架声明，仅用于加载应用内本地资源；不用于收集个人数据，不请求任何外部服务器，也没有版本检查或遥测上报。断网后导入、阅读、排版、标注、统计等所有核心功能均可正常使用。</li>
         <li><b>文件访问</b>：书籍导入通过系统文件选择器（SAF）完成，本应用<b>不申请</b>存储读写权限，无法在未经你主动选择文件的情况下访问设备上的其他文件。</li>
+        <li><b>通知（POST_NOTIFICATIONS，可选）</b>：仅当你主动开启「每日阅读提醒」时申请，用于按你设定的时间显示本机提醒；不接收任何远程推送，通知文案不包含书籍与个人信息。拒绝授权不影响任何其他功能。</li>
+        <li><b>精确闹钟（SCHEDULE_EXACT_ALARM）、开机启动（RECEIVE_BOOT_COMPLETED）、唤醒锁（WAKE_LOCK）</b>：由本地通知能力声明，仅用于设备重启后恢复提醒、并确保提醒按时弹出；不读取书籍内容，也不在后台上传任何数据。</li>
         <li class="camera-feature-only"><b>相机（CAMERA，可选）</b>：仅当你主动开启「视线翻页」时申请，用于在本机端侧检测「读到页底后回看页首」的回扫动作。视频帧只在内存中处理，<b>不上传、不保存、不写入日志</b>；关闭该功能、退出阅读器或切到后台会立即释放摄像头。默认关闭，拒绝授权不影响任何其他功能。</li>
       </ul>
       <h2>iOS（如后续版本上架）</h2>
@@ -1907,7 +1912,11 @@ function startReadingTimer() {
     const countedMs = readingTimeTick({ mode: READING_TIME_MODE, dt, effective });
     if (countedMs <= 0) return;
     const { justCheckedIn } = addReadingTime(currentBook.id, countedMs);
-    if (justCheckedIn) showToast(`今日阅读已打卡 ✓（≥${settings.checkinGoalMin} 分钟）`);
+    if (justCheckedIn) {
+      showToast(`今日阅读已打卡 ✓（≥${settings.checkinGoalMin} 分钟）`);
+      // 正反馈闭环：读完弹一次「接上了」，仅在用户主动开启每日提醒时生效
+      if (window.__INK_PACT && window.__INK_PACT.notifyDone) window.__INK_PACT.notifyDone();
+    }
   }, 1000);
 }
 function stopReadingTimer() {
@@ -2667,6 +2676,28 @@ function createHubLayer() {
   mountHub();
 }
 
+// 每日契约：独立反诱惑层。只通过 ctx 注入已有能力，不反向 import app.js。
+// 删除本函数与挂载调用、index.html 的 #daily-pact-slot / daily-pact.css 即可完整回退。
+function createDailyPactLayer() {
+  const api = mountDailyPact({
+    getSettings: () => settings,
+    setSettings: (patch) => { Object.assign(settings, patch); saveSettings(settings); },
+    getStats: () => loadStats(),
+    pickBook: async () => {
+      if (currentBook) return currentBook.id;
+      const metas = await listBooksMeta();
+      if (!metas.length) return null;
+      // Plus 已按最近阅读排序，直接取第一本 = 最容易续读的那本
+      const ordered = plus ? plus.sortShelf(metas.slice()) : metas;
+      return ordered.length ? ordered[0].id : null;
+    },
+    openBook,
+    showToast,
+    showView,
+  });
+  window.__INK_PACT = api; // 只读诊断 / 自动化回归入口
+}
+
 // ---------- 启动 ----------
 function init() {
   applySettings();
@@ -2676,6 +2707,7 @@ function init() {
   createNexusLayer();
   createAuroraLayer();
   createHubLayer();
+  createDailyPactLayer();
   bindEvents();
   renderShelf();
   ensureBookMeta();

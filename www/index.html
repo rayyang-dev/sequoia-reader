@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="css/ink-flip.css" />
     <link rel="stylesheet" href="css/release-review.css" />
     <link rel="stylesheet" href="css/privacy.css" />
+    <link rel="stylesheet" href="css/daily-pact.css" />
   </head>
   <body data-theme="ink" data-font="serif">
     <!-- ============ 书架 ============ -->
@@ -30,6 +31,8 @@
           </div>
         </div>
       </header>
+      <!-- 每日契约：连续天数 / 今日进度 / 一键续读。由 js/daily-pact.js 独立挂载，删掉 slot 即回退 -->
+      <div id="daily-pact-slot"></div>
       <div class="shelf-actions">
         <div class="shelf-actions-head" id="import-head" role="button" tabindex="0" aria-label="折叠或展开导入区">
           <span class="section-label">导入书籍</span>
@@ -224,6 +227,30 @@
             </div>
           </div>
           <p class="hint group-hint">AI 引擎默认关闭，不影响离线阅读。启用「AI 大模型」并填 Key 后，阅读页可选中文字「译 / 解释」、打开「AI 助手」生成全书或本章导读、书中问答、人物脉络笔记、智能书架标签、段落双语对照。API Key 仅存本机，本应用无服务器；支持任意 OpenAI 兼容接口（DeepSeek / 通义 / 本地 Ollama）。</p>
+        </div>
+
+        <div class="settings-group" id="settings-group-reminder">
+          <div class="group-title">每日阅读提醒</div>
+          <div class="group-body">
+            <div class="field">
+              <label class="switch"><input type="checkbox" id="set-reminder" /> 到点提醒我读书</label>
+            </div>
+            <div class="field reminder-times" id="reminder-fields">
+              <div>
+                <label>提醒时间</label>
+                <input type="time" id="set-reminder-time" value="21:00" />
+              </div>
+              <div>
+                <label class="switch"><input type="checkbox" id="set-reminder-second" /> 午间补一次（防忘记）</label>
+              </div>
+              <div>
+                <label>午间时间</label>
+                <input type="time" id="set-reminder-second-time" value="12:30" />
+              </div>
+              <button class="btn" id="set-reminder-test" type="button">发送测试通知</button>
+            </div>
+          </div>
+          <p class="hint group-hint">提醒由本机系统闹钟发出，不联网、不读取书籍内容，也不会把任何数据发给第三方。拒绝通知权限不影响阅读与统计。点通知可直接回到上次读的位置。</p>
         </div>
 
         <div class="settings-group">

@@ -131,8 +131,9 @@ try {
     text: document.getElementById('pc-doc-body').innerText,
   }));
   check('《隐私政策》全文层可打开', full.docVisible && full.title === '隐私政策', full.title);
-  check('全文含「六、你的权利」与生效日期',
-    /六、你的权利/.test(full.text) && /生效日期/.test(full.text), full.text.slice(0, 120));
+  // 章节编号会随政策正文增删而顺延，这里只校验章节存在，避免每次改文案都误报
+  check('全文含「你的权利」章节与生效日期',
+    /[一二三四五六七八九十]+、你的权利/.test(full.text) && /生效日期/.test(full.text), full.text.slice(0, 120));
   check('全文无「未开放功能却发数据给第三方」的旧描述',
     !/你主动启用 AI 功能时|将选中文本发送给|AI 内容免责|DeepL \/ OpenAI/.test(full.text), full.text.slice(0, 120));
   await page.click('#pc-doc-back');
@@ -160,8 +161,9 @@ try {
     };
   });
   check('同意后弹窗移除', agreed.maskGone, agreed);
-  check('同意状态按版本写入 localStorage',
-    !!(agreed.rec && agreed.rec.version === '1' && agreed.rec.agreed === true), agreed.rec);
+  // 版本随政策正文变更递增（当前 v2），只要求落盘版本不低于 v2
+  check('同意状态按当前版本写入 localStorage',
+    !!(agreed.rec && Number(agreed.rec.version) >= 2 && agreed.rec.agreed === true), agreed.rec);
   check('同意后清除等待标记', agreed.pending === false, agreed);
 
   // reload 不再弹

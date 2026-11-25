@@ -1,0 +1,67 @@
+/* 每日契约卡片 —— 独立样式，删掉本文件与 index.html 的 link 即完全回退。
+   配色用中性半透明 + currentColor/--accent，自动跟随墨水/夜览主题。 */
+#daily-pact-slot:empty { display: none; }
+
+.pact-card {
+  margin: 14px 16px 6px;
+  padding: 12px 14px 13px;
+  border: 1px solid rgba(127, 127, 127, .28);
+  border-radius: 12px;
+  background: rgba(127, 127, 127, .075);
+  color: inherit;
+  font-family: inherit;
+  box-shadow: 0 1px 0 rgba(127, 127, 127, .08);
+}
+.pact-card.pact-done {
+  border-color: rgba(90, 140, 90, .45);
+  background: rgba(90, 140, 90, .09);
+}
+.pact-top {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+}
+.pact-top strong {
+  font-size: 14px; font-weight: 600; letter-spacing: .01em;
+}
+.pact-count {
+  font-size: 12px; opacity: .72; white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+.pact-track {
+  height: 5px; margin: 10px 0 8px; border-radius: 999px;
+  background: rgba(127, 127, 127, .2); overflow: hidden;
+}
+.pact-fill {
+  display: block; height: 100%; border-radius: 999px;
+  background: var(--accent, #8a6a4b);
+  transition: width .35s ease;
+}
+.pact-done .pact-fill { background: #5a8c5a; }
+.pact-sub {
+  margin: 0 0 10px; font-size: 11.5px; line-height: 1.5; opacity: .68;
+}
+.pact-actions { display: flex; gap: 8px; }
+.pact-actions button {
+  flex: 1; min-height: 34px; padding: 6px 10px;
+  border-radius: 8px; font: inherit; font-size: 12.5px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pact-primary {
+  border: 1px solid transparent;
+  background: var(--accent, #8a6a4b);
+  color: #fff; font-weight: 600;
+}
+.pact-secondary {
+  border: 1px solid rgba(127, 127, 127, .38);
+  background: transparent; color: inherit;
+}
+.pact-actions button:active { opacity: .75; }
+
+/* 设置页提醒区块 */
+#settings-group-reminder .reminder-times {
+  display: flex; flex-direction: column; gap: 10px;
+}
+#settings-group-reminder input[type="time"] {
+  width: 100%; min-height: 38px; padding: 6px 10px;
+  border: 1px solid rgba(127, 127, 127, .35); border-radius: 8px;
+  background: transparent; color: inherit; font: inherit; font-size: 14px;
+}
+#set-reminder-test { width: 100%; }

@@ -4,7 +4,7 @@
   "description": "",
   "main": "sw.js",
   "scripts": {
-    "test": "node test/pro.mjs && node test/ink-flip.mjs && node test/plus.mjs && node test/stats.mjs && node test/nexus.mjs && node test/gaze.mjs && node test/gaze-integration.mjs && node test/smoke.mjs && node test/review-gate.mjs && node test/privacy-consent.mjs && node test/reading-time.mjs && node test/footnote.mjs && node test/marks.mjs && node test/speak-selection.mjs && node test/tts-fallback.mjs && node test/hub.mjs",
+    "test": "node test/pro.mjs && node test/ink-flip.mjs && node test/plus.mjs && node test/stats.mjs && node test/nexus.mjs && node test/gaze.mjs && node test/gaze-integration.mjs && node test/smoke.mjs && node test/review-gate.mjs && node test/privacy-consent.mjs && node test/reading-time.mjs && node test/footnote.mjs && node test/marks.mjs && node test/speak-selection.mjs && node test/tts-fallback.mjs && node test/hub.mjs && node test/daily-pact.mjs",
     "test:pro": "node test/pro.mjs",
     "test:plus": "node test/plus.mjs",
     "test:stats": "node test/stats.mjs",
@@ -19,7 +19,8 @@
     "test:marks": "node test/marks.mjs",
     "test:speak": "node test/speak-selection.mjs",
     "test:tts": "node test/tts-fallback.mjs",
-    "test:hub": "node test/hub.mjs"
+    "test:hub": "node test/hub.mjs",
+    "test:pact": "node test/daily-pact.mjs"
   },
   "keywords": [],
   "author": "",
@@ -29,6 +30,7 @@
     "@capacitor/app": "^8.1.2",
     "@capacitor/cli": "^8.6.0",
     "@capacitor/core": "^8.6.0",
+    "@capacitor/local-notifications": "^8.3.1",
     "mobi": "^0.0.1"
   },
   "devDependencies": {

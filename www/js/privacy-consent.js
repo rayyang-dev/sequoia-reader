@@ -18,7 +18,7 @@
 (function () {
   // 隐私政策版本：政策正文（LEGAL_CONTENT / docs/legal.html / site/legal.html）变更时 +1，
   // 用于让老用户重新确认。仅新增弹窗、正文未变时保持 '1'。
-  var POLICY_VERSION = '1';
+  var POLICY_VERSION = '2'; // v2：新增「每日阅读提醒」本机通知与对应权限说明（2026-11-25）
   var STORAGE_KEY = 'inkreader:privacy-consent';
   var CONTACT = '732897783@qq.com';
 
